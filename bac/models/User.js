@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
@@ -166,17 +165,14 @@ const userSchema = new mongoose.Schema(
 
 userSchema.pre("save", async function () {
 
-    // Password was not changed
+    // Mongoose 9 async middleware does not use the legacy `next` callback.
+    // Returning from this async function tells Mongoose the hook is complete.
     if (!this.isModified("password")) {
         return;
     }
 
     const salt = await bcrypt.genSalt(10);
-
-    this.password = await bcrypt.hash(
-        this.password,
-        salt
-    );
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 
@@ -217,4 +213,3 @@ module.exports = mongoose.model(
     "User",
     userSchema
 );
-

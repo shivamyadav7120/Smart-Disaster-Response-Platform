@@ -138,70 +138,56 @@ const getLiveVolunteers = async(req,res)=>{
 
 const getLiveRescueTeams = async (req, res) => {
     try {
-        const cutoff = new Date(Date.now() - 45 * 1000);
-
-        // Return every active registered team that has a known location.
-        // A team can therefore remain visible on the admin map even when
-        // its GPS heartbeat is temporarily offline; isLive tells the UI
-        // whether the last heartbeat is fresh.
         const teams = await RescueTeam.find({ isActive: true })
             .populate("user", "name email phone role")
-            .populate("assignedSOS", "status priority severity disasterType location createdAt user")
+            .populate("assignedSOS", "status priority location createdAt description")
+            .populate("assignedSOSs", "status priority location createdAt description disasterType severity")
             .lean();
 
-        const userIds = teams.map((team) => team.user?._id).filter(Boolean);
+        const userIds = teams.map((t) => t.user?._id).filter(Boolean);
         const tracking = await Tracking.find({
             user: { $in: userIds },
             type: "RescueTeam",
             isActive: true,
-        }).sort({ lastUpdated: -1 }).lean();
+        }).lean();
 
-        const latestByUser = new Map();
-        tracking.forEach((item) => {
-            const key = String(item.user);
-            if (!latestByUser.has(key)) latestByUser.set(key, item);
-        });
+        const byUser = new Map(tracking.map((t) => [String(t.user), t]));
 
-        const data = teams.map((team) => {
-            const current = team.user?._id
-                ? latestByUser.get(String(team.user._id))
-                : null;
-            const location = current?.location || team.currentLocation || null;
-            if (!location || !Number.isFinite(Number(location.latitude)) || !Number.isFinite(Number(location.longitude))) {
-                return null;
-            }
-
-            const lastUpdated = current?.lastUpdated || team.lastLocationUpdate || null;
-            const isLive = Boolean(lastUpdated && new Date(lastUpdated) >= cutoff);
-            const sosLocation = team.assignedSOS?.location;
-            let distanceKm = null;
-            if (sosLocation && Number.isFinite(Number(sosLocation.latitude)) && Number.isFinite(Number(sosLocation.longitude))) {
-                distanceKm = calculateDistance(
-                    Number(location.latitude), Number(location.longitude),
-                    Number(sosLocation.latitude), Number(sosLocation.longitude)
-                );
-            }
-
-            return {
-                ...team,
-                trackingId: current?._id || null,
-                location,
-                lat: Number(location.latitude),
-                lng: Number(location.longitude),
-                accuracy: Number.isFinite(Number(location.accuracy)) ? Number(location.accuracy) : null,
-                lastUpdated,
-                trackingStatus: current?.status || team.status,
-                isLive,
-                distanceToAssignedSOSKm: distanceKm,
-            };
-        }).filter(Boolean);
+        const data = teams
+            .map((team) => {
+                const current = team.user?._id ? byUser.get(String(team.user._id)) : null;
+                if (!current?.location) return null;
+                const assigned = (Array.isArray(team.assignedSOSs) && team.assignedSOSs.length) ? team.assignedSOSs : (team.assignedSOS ? [team.assignedSOS] : []);
+                const assignments = assigned.map(sos => {
+                    if (!sos?.location) return { sos, distanceKm: null, distanceMeters: null };
+                    const distanceKm = Number(calculateDistance(sos.location.latitude, sos.location.longitude, current.location.latitude, current.location.longitude));
+                    return { sos, distanceKm, distanceMeters: Math.round(distanceKm * 1000), distanceText: distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m` : `${distanceKm.toFixed(2)} km` };
+                });
+                return {
+                    ...team,
+                    assignedSOSs: assigned,
+                    assignments,
+                    trackingId: current._id,
+                    location: current.location,
+                    lat: current.location.latitude,
+                    lng: current.location.longitude,
+                    lastUpdated: current.lastUpdated,
+                    trackingStatus: current.status,
+                };
+            })
+            .filter(Boolean);
 
         res.json({ success: true, count: data.length, data });
     } catch (error) {
-        console.error("Live rescue teams map error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+// =====================================================
+// Get Nearby Volunteers
+// GET /api/map/volunteers
+// =====================================================
 
 const getNearbyVolunteers = async(req,res)=>{
 

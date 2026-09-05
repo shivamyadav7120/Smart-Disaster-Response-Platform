@@ -1,28 +1,13 @@
-
 // ==========================================
 // Smart Disaster Response Platform
 // server.js
 // ==========================================
 
 // ==========================================
-// Load Environment Variables FIRST
+// Load Environment Variables
 // ==========================================
 
 require("dotenv").config();
-
-// ==========================================
-// Verify Environment Variables
-// ==========================================
-
-console.log(
-    "JWT_SECRET loaded:",
-    !!process.env.JWT_SECRET
-);
-
-console.log(
-    "JWT_EXPIRE loaded:",
-    !!process.env.JWT_EXPIRE
-);
 
 // ==========================================
 // Core Modules
@@ -62,26 +47,13 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
-
         // --------------------------------------
-        // Check JWT Configuration
-        // --------------------------------------
-
-        if (!process.env.JWT_SECRET) {
-            throw new Error(
-                "JWT_SECRET is missing from .env file"
-            );
-        }
-
-        // --------------------------------------
-        // Connect MongoDB First
+        // Connect MongoDB first
         // --------------------------------------
 
         await connectDB();
 
-        console.log(
-            "✅ MongoDB connected successfully"
-        );
+        console.log("✅ MongoDB connected successfully");
 
         // --------------------------------------
         // Create HTTP Server
@@ -95,19 +67,14 @@ const startServer = async () => {
 
         initializeSocket(server);
 
-        console.log(
-            "✅ Socket.IO initialized"
-        );
+        console.log("✅ Socket.IO initialized");
 
         // --------------------------------------
         // Start HTTP Server
         // --------------------------------------
 
         server.listen(PORT, () => {
-
-            console.log(
-                "===================================="
-            );
+            console.log("====================================");
 
             console.log(
                 " Smart Disaster Response Platform"
@@ -129,22 +96,10 @@ const startServer = async () => {
             );
 
             console.log(
-                ` JWT : Configured`
-            );
-
-            console.log(
-                ` JWT Expiry : ${
-                    process.env.JWT_EXPIRE || "7d"
-                }`
-            );
-
-            console.log(
                 " Socket.IO : Enabled"
             );
 
-            console.log(
-                "===================================="
-            );
+            console.log("====================================");
         });
 
         // --------------------------------------
@@ -152,13 +107,11 @@ const startServer = async () => {
         // --------------------------------------
 
         const shutdown = () => {
-
             console.log(
                 "\n🛑 Shutting down server..."
             );
 
             server.close(() => {
-
                 console.log(
                     "✅ HTTP server closed"
                 );
@@ -167,18 +120,10 @@ const startServer = async () => {
             });
         };
 
-        process.on(
-            "SIGINT",
-            shutdown
-        );
-
-        process.on(
-            "SIGTERM",
-            shutdown
-        );
+        process.on("SIGINT", shutdown);
+        process.on("SIGTERM", shutdown);
 
     } catch (error) {
-
         console.error(
             "❌ Server startup failed:",
             error.message
@@ -193,4 +138,3 @@ const startServer = async () => {
 // ==========================================
 
 startServer();
-

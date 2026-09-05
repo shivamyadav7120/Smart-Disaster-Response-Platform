@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react'
 import { detectDamage } from '../services/aiDamage'
+import { aiDamageReport as initialReport } from '../data/mockData'
 import { useNavigate } from 'react-router-dom'
 
 const severityColor = { High: '#dc4b3e', Medium: '#d98a1f', Low: '#2f8a52' }
 
 export default function AIDamageCard() {
-  const [report, setReport] = useState(null)
+  const [report, setReport] = useState(initialReport)
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const fileRef = useRef(null)
@@ -15,7 +16,7 @@ export default function AIDamageCard() {
     if (!file) return
     setLoading(true)
     const result = await detectDamage(file)
-    setReport(result || null)
+    setReport(result)
     setLoading(false)
   }
 
@@ -34,7 +35,7 @@ export default function AIDamageCard() {
 
       {loading ? (
         <div className="h-16 rounded-lg bg-[#f3f7f3] animate-pulse" />
-      ) : report ? (
+      ) : (
         <div className="flex gap-3 items-center">
           <div className="w-20 h-16 rounded-lg overflow-hidden shrink-0 bg-[#dceadd] flex items-center justify-center text-2xl">
             🌊
@@ -52,8 +53,6 @@ export default function AIDamageCard() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No AI damage report available. Upload an image to run live analysis.</div>
       )}
 
       <button onClick={() => navigate('/reports')} className="mt-4 w-full py-2.5 rounded-lg text-white text-sm font-semibold bg-forest-800 hover:opacity-90 transition">

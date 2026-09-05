@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { fetchResources } from '../services/api'
 import { Icon } from './icons'
 import { useNavigate } from 'react-router-dom'
+import { resourceStatus as mockResources } from '../data/mockData'
 
 export default function ResourceCard() {
-  const [resources, setResources] = useState([])
+  const [resources, setResources] = useState(mockResources)
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetchResources().then((data) => setResources(Array.isArray(data) ? data : [])).catch(() => setResources([]))
+    fetchResources().then((data) => setResources(data.length ? data : mockResources)).catch(() => setResources(mockResources))
   }, [])
 
   return (

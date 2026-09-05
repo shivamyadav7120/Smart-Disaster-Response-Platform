@@ -50,6 +50,13 @@ const rescueTeamSchema = new mongoose.Schema(
             default: null,
         },
 
+        // A team may be dispatched to more than one SOS. The singular field
+        // above is retained for backward compatibility and stores the primary SOS.
+        assignedSOSs: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "SOS",
+        }],
+
         currentLocation: {
             latitude: { type: Number, default: null },
             longitude: { type: Number, default: null },

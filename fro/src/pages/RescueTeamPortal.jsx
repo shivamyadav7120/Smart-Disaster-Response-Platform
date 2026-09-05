@@ -1,45 +1,29 @@
-import React, { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import RescueTeamTracker from "../components/RescueTeamTracker";
 import { fetchMyRescueTeam, fetchMyRescueAssignments, updateRescueAssignmentStatus } from "../services/api";
-import { connectSocket, onRescueAssignment, onRescueStatusUpdate } from "../services/socket";
-export default function RescueTeamPortal(){
- const { user, logout } = useAuth();
- const navigate = useNavigate();
- const [team,setTeam]=useState(null);const [assignments,setAssignments]=useState([]);const [error,setError]=useState("");
- const load=async()=>{try{const [t,a]=await Promise.all([fetchMyRescueTeam(),fetchMyRescueAssignments()]);setTeam(t);setAssignments(a)}catch(e){setError(e?.response?.data?.message||e.message)}};
- useEffect(()=>{load();connectSocket();const a=onRescueAssignment(load);const b=onRescueStatusUpdate(load);return()=>{a();b()}},[]);
- const update=async(id,status)=>{try{await updateRescueAssignmentStatus(id,status);await load()}catch(e){setError(e?.response?.data?.message||e.message)}};
- const handleLogout = () => {
-  logout();
-  navigate("/login", { replace: true });
- };
+import { connectSocket, onNewSOS, onRescueAssignment, onRescueStatusUpdate } from "../services/socket";
+import { useAuth } from "../context/AuthContext";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
- return <div className="min-h-screen bg-[#f4f8f4]">
-  <header className="sticky top-0 z-30 bg-white border-b border-[#d9ead9] shadow-sm">
-   <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-    <div>
-     <h1 className="text-xl sm:text-2xl font-extrabold text-[#123322]">Rescue Team Portal</h1>
-     <p className="text-sm text-[#4d6156]">Operational dashboard • Live GPS tracking</p>
-    </div>
-    <div className="flex items-center gap-3">
-     <div className="hidden sm:block text-right">
-      <p className="font-semibold text-[#123322]">{user?.name || team?.name || "Rescue Team"}</p>
-      <p className="text-xs text-[#4d6156]">{user?.role || "RescueTeam"}</p>
-     </div>
-     <div className="w-10 h-10 rounded-full bg-[#d9a441] flex items-center justify-center font-bold text-[#123322]">
-      {(user?.name || team?.name || "R").charAt(0).toUpperCase()}
-     </div>
-     <button onClick={handleLogout} className="px-4 py-2 rounded-lg bg-[#dc4b3e] text-white font-semibold text-sm hover:bg-[#c63e33] transition">
-      Logout
-     </button>
-    </div>
-   </div>
-  </header>
-  <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-   <PageHeader title="Rescue Team Portal" subtitle="Operational dashboard for assigned emergencies and live GPS."/>{error&&<div className="mb-4 bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}<RescueTeamTracker/><div className="grid lg:grid-cols-3 gap-5"><div className="lg:col-span-2 space-y-4">{assignments.map(s=><div key={s._id} className="bg-white border border-[#dbeadb] rounded-2xl p-5"><div className="flex justify-between gap-4"><div><div className="font-extrabold text-[#18352a]">SOS #{String(s._id).slice(-8)}</div><div className="text-sm text-slate-500">{s.disasterType} · {s.severity}</div></div><span className="text-xs font-bold rounded-full bg-amber-50 text-amber-800 px-3 py-1 h-fit">{s.status}</span></div><div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm"><div>Citizen: <b>{s.user?.name||"Citizen"}</b></div><div>Phone: <b>{s.user?.phone||"—"}</b></div><div>Location: <b>{s.location?.latitude?.toFixed?.(5)}, {s.location?.longitude?.toFixed?.(5)}</b></div><div>Description: <b>{s.description}</b></div></div><div className="flex flex-wrap gap-2 mt-5">{s.status!=="Accepted"&&<button onClick={()=>update(s._id,"Accepted")} className="px-3 py-2 rounded-lg bg-slate-800 text-white text-xs font-bold">Accept</button>}<button onClick={()=>update(s._id,"Rescue On Way")} className="px-3 py-2 rounded-lg bg-blue-700 text-white text-xs font-bold">Rescue On Way</button><button onClick={()=>update(s._id,"Reached")} className="px-3 py-2 rounded-lg bg-green-700 text-white text-xs font-bold">Team Reached</button><button onClick={()=>update(s._id,"Resolved")} className="px-3 py-2 rounded-lg bg-emerald-900 text-white text-xs font-bold">Resolved</button></div></div>)}{!assignments.length&&<div className="bg-white border rounded-2xl p-8 text-center text-slate-500">No SOS assignments currently.</div>}</div><div className="bg-white border border-[#dbeadb] rounded-2xl p-5 h-fit"><div className="font-extrabold">Team Status</div><div className="text-3xl font-black text-green-700 mt-2">{team?.status||"—"}</div><div className="text-sm text-slate-500 mt-2">{team?.name}</div><div className="mt-4 text-sm space-y-2"><div>Leader: <b>{team?.leaderName||"—"}</b></div><div>Members: <b>{team?.members||0}</b></div><div>Area: <b>{team?.assignedArea||"—"}</b></div><div>GPS: <b>{team?.lat&&team?.lng?`${team.lat.toFixed(5)}, ${team.lng.toFixed(5)}`:"Start Live GPS"}</b></div></div></div></div>
-  </main>
- </div>
+const teamIcon=L.divIcon({html:"<div style='font-size:28px'>🚑</div>",className:"",iconSize:[32,32],iconAnchor:[16,16]});
+const sosIcon=L.divIcon({html:"<div style='font-size:26px'>🚨</div>",className:"",iconSize:[32,32],iconAnchor:[16,16]});
+const distanceKm=(a,b)=>{if(!a||!b)return null;const R=6371,dLat=(Number(b.latitude)-Number(a.latitude))*Math.PI/180,dLon=(Number(b.longitude)-Number(a.longitude))*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(Number(a.latitude)*Math.PI/180)*Math.cos(Number(b.latitude)*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));};
+const distanceText=(d)=>d==null?"GPS unavailable":d<1?`${Math.round(d*1000)} m`:`${d.toFixed(2)} km`;
+function FitMap({points}){const map=useMap();useEffect(()=>{if(points.length>1)map.fitBounds(points,{padding:[30,30]});else if(points.length===1)map.setView(points[0],15)},[map,points]);return null}
+
+export default function RescueTeamPortal(){
+ const { user, logout } = useAuth(); const [team,setTeam]=useState(null); const [assignments,setAssignments]=useState([]); const [incomingSOS,setIncomingSOS]=useState([]); const [error,setError]=useState("");
+ const load=async()=>{try{setError("");const [t,a]=await Promise.all([fetchMyRescueTeam(),fetchMyRescueAssignments()]);setTeam(t);setAssignments(a)}catch(e){setError(e?.response?.data?.message||e.message)}};
+ useEffect(()=>{load();connectSocket();const timer=setInterval(load,10000);const a=onRescueAssignment(load),b=onRescueStatusUpdate(load),c=onNewSOS((sos)=>{setIncomingSOS(items=>{const id=String(sos?._id||sos?.id);if(!id)return items;const next=items.filter(x=>String(x._id||x.id)!==id);return [sos,...next].slice(0,10)});});return()=>{clearInterval(timer);a();b();c()}},[]);
+ const update=async(id,status)=>{try{await updateRescueAssignmentStatus(id,status);await load()}catch(e){setError(e?.response?.data?.message||e.message)}};
+ const own=team?.location||((team?.lat!=null&&team?.lng!=null)?{latitude:team.lat,longitude:team.lng}:null);
+ const points=useMemo(()=>[...(own?[ [own.latitude,own.longitude] ]:[]),...assignments.filter(s=>s.location).map(s=>[s.location.latitude,s.location.longitude])],[own,assignments]);
+ return <div className="min-h-screen bg-[#eef8ef] text-[#18352a]"><div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[#dbeadb] shadow-sm"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4"><div className="min-w-0"><div className="text-xs font-bold uppercase tracking-wider text-emerald-700">SDRP Operations</div><div className="font-black text-lg truncate">Rescue Team Portal</div><div className="text-xs text-slate-500 truncate">{team?.name||user?.name||"Rescue Team"}</div></div><button type="button" onClick={logout} className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold shadow-sm">↪ Logout</button></div></div>
+ <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"><PageHeader title="Rescue Team Portal" subtitle="Multiple SOS assignments, live GPS, map and team-to-victim distance."/>{incomingSOS.length>0&&<div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4"><div className="flex items-center justify-between gap-3"><div><div className="font-extrabold text-red-800">🚨 New SOS detected</div><div className="text-xs text-red-700 mt-1">This emergency was received automatically. Admin dispatch/assignment is required before your team can accept it.</div></div><button onClick={()=>setIncomingSOS([])} className="text-xs font-bold text-red-700">Clear</button></div><div className="mt-3 grid gap-2">{incomingSOS.slice(0,3).map(s=><div key={s._id||s.id} className="rounded-xl bg-white border border-red-100 p-3 text-sm"><div className="font-bold">SOS #{String(s._id||s.id).slice(-8)} · {s.disasterType} · {s.severity}</div><div className="text-slate-600 mt-1">{s.description||"No description"}</div><div className="text-xs text-slate-500 mt-1">Victim GPS: {s.location?.latitude?.toFixed?.(5)}, {s.location?.longitude?.toFixed?.(5)}</div></div>)}</div></div>}{error&&<div className="mb-4 bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm">{error}</div>}<RescueTeamTracker/>
+ <div className="grid lg:grid-cols-3 gap-5 mb-5"><div className="lg:col-span-2 bg-white rounded-2xl border overflow-hidden" style={{height:420}}>{points.length?<MapContainer center={points[0]} zoom={14} style={{height:"100%"}}><TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/><FitMap points={points}/>{own&&<Marker position={[own.latitude,own.longitude]} icon={teamIcon}><Popup><b>{team?.name||"My Rescue Team"}</b><br/>Your live GPS location</Popup></Marker>}{assignments.filter(s=>s.location).map(s=><React.Fragment key={s._id}><Marker position={[s.location.latitude,s.location.longitude]} icon={sosIcon}><Popup><b>SOS #{String(s._id).slice(-8)}</b><br/>{s.disasterType} · {s.severity}<br/>{s.description||"No description"}<br/><b>Distance: {distanceText(distanceKm(own,s.location))}</b></Popup></Marker>{own&&<Polyline positions={[[own.latitude,own.longitude],[s.location.latitude,s.location.longitude]]}/>}</React.Fragment>)}</MapContainer>:<div className="h-full flex items-center justify-center text-slate-500">Start Live GPS and wait for SOS location data.</div>}</div>
+ <div className="bg-white border border-[#dbeadb] rounded-2xl p-5 h-fit"><div className="font-extrabold">Team Status</div><div className="text-3xl font-black text-green-700 mt-2">{team?.status||"—"}</div><div className="text-sm text-slate-500 mt-2">{team?.name}</div><div className="mt-4 text-sm space-y-2"><div>Leader: <b>{team?.leaderName||"—"}</b></div><div>Members: <b>{team?.members||0}</b></div><div>Area: <b>{team?.assignedArea||"—"}</b></div><div>GPS: <b>{own?`${own.latitude.toFixed(5)}, ${own.longitude.toFixed(5)}`:"Offline"}</b></div><div>Active SOS: <b>{assignments.filter(s=>s.isActive!==false).length}</b></div></div></div></div>
+ <div className="space-y-4">{assignments.map(s=>{const d=distanceKm(own,s.location);return <div key={s._id} className="bg-white border border-[#dbeadb] rounded-2xl p-5"><div className="flex justify-between gap-4"><div><div className="font-extrabold">SOS #{String(s._id).slice(-8)}</div><div className="text-sm text-slate-500">{s.disasterType} · {s.severity} · {s.status}</div></div><div className="text-right"><div className="text-xs text-slate-500">Distance to victim</div><div className="text-xl font-black text-blue-700">{distanceText(d)}</div>{s.etaMinutes!=null&&<div className="text-xs text-slate-500">ETA ~{s.etaMinutes} min</div>}</div></div><div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm"><div>Citizen: <b>{s.user?.name||"Citizen"}</b></div><div>Phone: <b>{s.user?.phone||"—"}</b></div><div>Victim GPS: <b>{s.location?.latitude?.toFixed?.(5)}, {s.location?.longitude?.toFixed?.(5)}</b></div><div>Description: <b>{s.description||"—"}</b></div></div><div className="flex flex-wrap gap-2 mt-5"><button onClick={()=>update(s._id,"Accepted")} className="px-3 py-2 rounded-lg bg-slate-800 text-white text-xs font-bold">Accept</button><button onClick={()=>update(s._id,"Rescue On Way")} className="px-3 py-2 rounded-lg bg-blue-700 text-white text-xs font-bold">Rescue On Way</button><button onClick={()=>update(s._id,"Reached")} className="px-3 py-2 rounded-lg bg-green-700 text-white text-xs font-bold">Team Reached</button><button onClick={()=>update(s._id,"Resolved")} className="px-3 py-2 rounded-lg bg-emerald-900 text-white text-xs font-bold">Resolved</button></div></div>})}{!assignments.length&&<div className="bg-white border rounded-2xl p-8 text-center text-slate-500">No SOS assignments currently.</div>}</div></main></div>
 }

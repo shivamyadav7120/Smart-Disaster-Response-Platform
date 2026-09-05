@@ -1,11 +1,12 @@
 import axios from 'axios'
+import { aiDamageReport as mockReport } from '../data/mockData'
 
 const ENDPOINT = import.meta.env.VITE_AI_DAMAGE_ENDPOINT || 'http://localhost:8001/predict'
 
 // Sends an image to your FastAPI + YOLO damage-detection service.
 // imageFile: a File/Blob from an <input type="file"> or the map's report-damage flow.
 export async function detectDamage(imageFile) {
-  if (!imageFile) return null
+  if (!imageFile) return mockReport
 
   try {
     const form = new FormData()
@@ -19,8 +20,8 @@ export async function detectDamage(imageFile) {
     // Expected FastAPI response shape: { title, confidence, severity, imageUrl }
     return data
   } catch (err) {
-    console.warn('[ai-damage] model endpoint not reachable:', err.message)
-    return null
+    console.warn('[ai-damage] model endpoint not reachable, using mock report:', err.message)
+    return mockReport
   }
 }
 
@@ -29,7 +30,7 @@ export async function fetchDamageReports() {
     const { data } = await axios.get(`${ENDPOINT.replace('/predict', '')}/reports`)
     return data
   } catch (err) {
-    console.warn('[ai-damage] reports endpoint not reachable:', err.message)
-    return []
+    console.warn('[ai-damage] reports endpoint not reachable, using mock report:', err.message)
+    return [mockReport]
   }
 }

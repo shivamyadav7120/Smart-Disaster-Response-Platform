@@ -228,6 +228,13 @@ const normalizeSOS = (s = {}, index = 0) => {
       s.assignedRescueTeam ||
       null,
 
+    assignedRescueTeams:
+      Array.isArray(s.assignedRescueTeams)
+        ? s.assignedRescueTeams
+        : s.assignedRescueTeam
+          ? [s.assignedRescueTeam]
+          : [],
+
     lat: getLat(s),
     lng: getLng(s),
   };
@@ -276,12 +283,12 @@ export const fetchStats = async () => {
       {
         label: "Active Rescue Teams",
         value: Number(
-          data.activeRescueTeams ??
-            data.rescueTeams ??
+          data.rescueTeams ??
+            data.teams ??
             data.activeTeams ??
             0
         ),
-        delta: `${Number(data.inactiveRescueTeams ?? 0)} inactive · ${Number(data.rescueTeams ?? data.rescueTeamsTotal ?? 0)} total`,
+        delta: "",
         tone: "green",
         icon: "users",
       },
@@ -566,6 +573,16 @@ export const fetchRescueTeams = async () => {
       team.assignedSOS ||
       null,
 
+    assignedSOSs:
+      Array.isArray(team.assignedSOSs)
+        ? team.assignedSOSs
+        : team.assignedSOS
+          ? [team.assignedSOS]
+          : [],
+
+    assignments:
+      Array.isArray(team.assignments) ? team.assignments : [],
+
     lastUpdated:
       team.lastUpdated ||
       null,
@@ -663,7 +680,6 @@ export const fetchMyRescueTeam = async () => {
 export const updateMyRescueTeamLocation = async ({
   latitude,
   longitude,
-  accuracy,
   status,
 }) => {
   const response = await api.post(
@@ -671,20 +687,12 @@ export const updateMyRescueTeamLocation = async ({
     {
       latitude,
       longitude,
-      ...(Number.isFinite(Number(accuracy))
-        ? { accuracy: Number(accuracy) }
-        : {}),
       ...(status
         ? { status }
         : {}),
     }
   );
 
-  return unwrap(response);
-};
-
-export const stopMyRescueTeamLocation = async () => {
-  const response = await api.post("/rescue-teams/my/location/stop");
   return unwrap(response);
 };
 
@@ -750,8 +758,9 @@ export const trackMyRescueTeam = async () => {
   return unwrap(await api.get("/rescue-teams/track/my"));
 };
 
-export const assignRescueTeam = async (sosId, rescueTeamId) => {
-  return unwrap(await api.patch(`/rescue-teams/assign/${sosId}`, { rescueTeamId }));
+export const assignRescueTeam = async (sosId, rescueTeamIds) => {
+  const ids = Array.isArray(rescueTeamIds) ? rescueTeamIds : [rescueTeamIds];
+  return unwrap(await api.patch(`/rescue-teams/assign/${sosId}`, { rescueTeamIds: ids }));
 };
 
 export const updateRescueAssignmentStatus = async (sosId, status) => {

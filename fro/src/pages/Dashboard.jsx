@@ -9,12 +9,15 @@ import ResourceCard from "../components/ResourceCard";
 import AIDamageCard from "../components/AIDamageCard";
 
 import { fetchStats } from "../services/api";
+import { stats as mockStats } from "../data/mockData";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState([]);
+  const [stats, setStats] = useState(mockStats);
   const [loading, setLoading] = useState(true);
+  const [usingDemoData, setUsingDemoData] =
+    useState(false);
 
   /* =====================================================
      LOAD DASHBOARD STATS
@@ -22,18 +25,25 @@ export default function Dashboard() {
 
   const loadStats = async () => {
     setLoading(true);
+    setUsingDemoData(false);
 
     try {
       const data = await fetchStats();
 
-      setStats(Array.isArray(data) ? data : []);
+      if (Array.isArray(data) && data.length > 0) {
+        setStats(data);
+      } else {
+        setStats(mockStats);
+        setUsingDemoData(true);
+      }
     } catch (error) {
       console.error(
         "Dashboard stats error:",
         error
       );
 
-      setStats([]);
+      setStats(mockStats);
+      setUsingDemoData(true);
     } finally {
       setLoading(false);
     }
@@ -49,6 +59,17 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+
+      {/* =================================================
+          DEMO DATA WARNING
+      ================================================= */}
+
+      {usingDemoData && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Live dashboard statistics are
+          unavailable. Demo data is being shown.
+        </div>
+      )}
 
       {/* =================================================
           STATISTICS

@@ -467,6 +467,7 @@ const emitRescueStatusUpdate = (sos) => {
         sosId: String(sos._id || sos.id),
         status: sos.status,
         assignedRescueTeam: sos.assignedRescueTeam || null,
+        assignedRescueTeams: sos.assignedRescueTeams || (sos.assignedRescueTeam ? [sos.assignedRescueTeam] : []),
         reachedAt: sos.reachedAt || null,
         resolvedAt: sos.resolvedAt || null,
     };

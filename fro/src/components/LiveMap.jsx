@@ -42,7 +42,12 @@ import {
 import {
   joinLiveMap,
   onLocationUpdate,
+  onNewSOS,
 } from '../services/socket'
+
+import {
+  blockedRoads as fallbackBlockedRoads,
+} from '../data/mockData'
 
 import riskZones from '../data/riskZones'
 
@@ -332,97 +337,50 @@ export default function LiveMap({
     loadData()
   }, [])
 
-  // Receive real rescue-team GPS updates without refreshing the page.
-  // The 30s refresh reconciles the UI with MongoDB if a socket disconnects.
+  // Receive newly created SOS alerts without refreshing the command map.
+  useEffect(() => {
+    const stopListening = onNewSOS((incoming) => {
+      if (!incoming?._id && !incoming?.id) return
+      setSOS((current) => {
+        const id = String(incoming._id || incoming.id)
+        const index = current.findIndex((item) => String(item._id || item.id) === id)
+        if (index === -1) return [incoming, ...current]
+        const next = [...current]
+        next[index] = { ...next[index], ...incoming }
+        return next
+      })
+    })
+    return stopListening
+  }, [])
+
+  // Receive rescue-team GPS updates without refreshing the page.
   useEffect(() => {
     joinLiveMap()
 
     const stopListening = onLocationUpdate((update) => {
       if (update?.type !== 'RescueTeam') return
 
-      const teamKey = String(
-        update.teamId ||
-        update._id ||
-        update.teamUserId ||
-        ''
-      )
-
-      if (
-        update.isLive === false ||
-        update.status === 'Offline'
-      ) {
-        setTeams((current) =>
-          current.filter(
-            (team) =>
-              String(
-                team._id ||
-                team.teamId ||
-                team.teamUserId ||
-                ''
-              ) !== teamKey
-          )
-        )
-        return
-      }
-
-      const lat = Number(
-        update.lat ??
-        update.location?.latitude
-      )
-      const lng = Number(
-        update.lng ??
-        update.location?.longitude
-      )
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-
       setTeams((current) => {
         const incoming = {
           ...update,
-          _id: update.teamId || update._id,
-          lat,
-          lng,
-          status:
-            update.status ||
-            update.trackingStatus ||
-            'Available',
-          trackingStatus:
-            update.trackingStatus ||
-            update.status ||
-            'Available',
-          isLive: true,
+          lat: Number(update.lat ?? update.location?.latitude),
+          lng: Number(update.lng ?? update.location?.longitude),
+          status: update.status || 'Available',
         }
 
         const index = current.findIndex(
-          (team) =>
-            String(
-              team._id ||
-              team.teamId ||
-              team.teamUserId ||
-              ''
-            ) === teamKey
+          (team) => String(team._id || team.teamId) === String(update.teamId)
         )
 
         if (index === -1) return [...current, incoming]
 
         const next = [...current]
-        next[index] = {
-          ...next[index],
-          ...incoming,
-        }
+        next[index] = { ...next[index], ...incoming }
         return next
       })
     })
 
-    const reconcile = window.setInterval(
-      loadData,
-      30000
-    )
-
-    return () => {
-      stopListening()
-      window.clearInterval(reconcile)
-    }
+    return stopListening
   }, [])
 
 
@@ -453,7 +411,8 @@ export default function LiveMap({
           x.status !== 'Offline'
       ).length,
 
-      blocked: 0,
+      blocked:
+        fallbackBlockedRoads.length,
     }),
 
     [
@@ -1142,17 +1101,6 @@ export default function LiveMap({
                       {s.status ||
                         'Pending'}
 
-                      {s.assignedRescueTeam && (
-                        <>
-                          <br />
-                          Rescue Team:{' '}
-                          <b>{s.assignedRescueTeam.name || 'Assigned team'}</b>
-                        </>
-                      )}
-
-                      <br />
-                      Coordinates: {Number(s.lat).toFixed(5)}, {Number(s.lng).toFixed(5)}
-
 
                       <div className="flex gap-1 mt-2">
 
@@ -1329,20 +1277,23 @@ export default function LiveMap({
                         <div><b>Area:</b> {t.assignedArea || t.area || '—'}</div>
                         <div><b>Skills:</b> {Array.isArray(t.skills) && t.skills.length ? t.skills.join(', ') : '—'}</div>
                         <div><b>GPS:</b> {Number(t.lat).toFixed(5)}, {Number(t.lng).toFixed(5)}</div>
-                        <div><b>Accuracy:</b> {Number.isFinite(Number(t.accuracy)) ? `~${Math.round(Number(t.accuracy))} m` : '—'}</div>
                         <div><b>Updated:</b> {t.lastUpdated ? new Date(t.lastUpdated).toLocaleString() : 'Just now'}</div>
-                        <div><b>GPS state:</b> {t.isLive ? 'Live' : 'Last known location'}</div>
-                        {Number.isFinite(Number(t.distanceToAssignedSOSKm)) && (
-                          <div><b>Distance to assigned SOS:</b> {Number(t.distanceToAssignedSOSKm).toFixed(2)} km</div>
-                        )}
-                        <div className="mt-1 inline-flex rounded-full bg-green-50 px-2 py-1 text-[10px] font-bold text-green-700">● LIVE GPS</div>
                       </div>
 
-                      {t.assignedSOS && (
+                      {Array.isArray(t.assignments) && t.assignments.length ? (
+                        <div className="mt-2 rounded-lg bg-red-50 px-2 py-1.5 text-[11px] text-red-700">
+                          <div className="font-bold mb-1">Active SOS / Distance</div>
+                          {t.assignments.map((a, i) => (
+                            <div key={a.sos?._id || i}>
+                              #{String(a.sos?._id || '').slice(-8)} — {a.distanceText || (a.distanceMeters != null ? `${a.distanceMeters} m` : 'GPS unavailable')}
+                            </div>
+                          ))}
+                        </div>
+                      ) : t.assignedSOS ? (
                         <div className="mt-2 rounded-lg bg-red-50 px-2 py-1.5 text-[11px] text-red-700">
                           Assigned SOS: {t.assignedSOS._id || t.assignedSOS.id || 'Active incident'}
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                   </Popup>
@@ -1431,8 +1382,9 @@ export default function LiveMap({
 
           {/* BLOCKED ROADS */}
 
-          {false &&
-            [].map(
+          {visible.blocked &&
+
+            fallbackBlockedRoads.map(
               (b) => (
 
                 <CircleMarker

@@ -2,16 +2,17 @@ const express = require("express");
 const router = express.Router();
 const {
     getRescueTeams, getLiveRescueTeams, getRescueTeamById, createRescueTeam,
-    updateRescueTeam, deleteRescueTeam, updateRescueTeamLocation, stopRescueTeamLocation, getMyRescueTeam,
+    updateRescueTeam, deleteRescueTeam, updateRescueTeamLocation, getMyRescueTeam,
     getMyAssignments, assignRescueTeam, trackMyRescueTeam, updateAssignedSOSStatus,
 } = require("../controllers/rescueTeamController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 router.use(protect);
 router.get("/my", authorize("RescueTeam"), getMyRescueTeam);
+router.get("/my/profile", authorize("RescueTeam"), getMyRescueTeam);
 router.get("/my/assignments", authorize("RescueTeam"), getMyAssignments);
 router.get("/track/my", authorize("Citizen"), trackMyRescueTeam);
+router.get("/track/:sosId", authorize("Citizen"), trackMyRescueTeam);
 router.post("/my/location", authorize("RescueTeam"), updateRescueTeamLocation);
-router.post("/my/location/stop", authorize("RescueTeam"), stopRescueTeamLocation);
 router.patch("/my/assignments/:sosId/status", authorize("RescueTeam"), updateAssignedSOSStatus);
 router.get("/live", authorize("SuperAdmin", "DistrictAdmin", "NGO", "Police", "Volunteer"), getLiveRescueTeams);
 router.get("/", authorize("SuperAdmin", "DistrictAdmin", "NGO", "Police", "Volunteer"), getRescueTeams);

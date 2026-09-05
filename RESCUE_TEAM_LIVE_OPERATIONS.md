@@ -30,10 +30,3 @@ npm run dev
 ```
 
 Use `http://localhost:5173` or HTTPS for browser GPS.
-
-
-## Reliability fixes
-- Multiple rescue teams are supported; each team must have a unique login email because User.email is unique.
-- Admin map returns all active teams with a known current/last-known GPS position and marks fresh heartbeats as Live.
-- Assigned SOS is populated on team markers and distance to the assigned SOS is calculated server-side with the Haversine formula.
-- Dashboard rescue-team count comes from RescueTeam documents, not volunteer count.

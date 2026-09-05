@@ -1,4 +1,5 @@
 import { api } from './api'
+import { weatherAlert as mockWeather } from '../data/mockData'
 
 // Fetch current weather from our backend.
 // Backend -> OpenWeather API
@@ -23,7 +24,7 @@ export async function fetchWeatherAlert(lat, lon) {
     const weatherData = body?.data ?? body
 
     if (!weatherData || typeof weatherData !== 'object') {
-      return null
+      return mockWeather
     }
 
     const description =
@@ -76,6 +77,6 @@ export async function fetchWeatherAlert(lat, lon) {
     )
 
     // Keep UI working even when backend/OpenWeather is unavailable.
-    return null
+    return mockWeather
   }
 };

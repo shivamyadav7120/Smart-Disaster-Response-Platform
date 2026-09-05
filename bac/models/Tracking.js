@@ -84,12 +84,8 @@ const trackingSchema = new mongoose.Schema(
 
 
 // Update location time automatically
-trackingSchema.pre("save", function(next){
-
+trackingSchema.pre("save", function(){
     this.lastUpdated = new Date();
-
-    next();
-
 });
 
 

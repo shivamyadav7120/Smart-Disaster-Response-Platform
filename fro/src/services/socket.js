@@ -52,6 +52,11 @@ export function onRescueStatusUpdate(callback) {
   return () => socket.off('rescueStatusUpdate', callback)
 }
 
+export function onNewSOS(callback) {
+  socket.on('newSOS', callback)
+  return () => socket.off('newSOS', callback)
+}
+
 export function onRescueAssignment(callback) {
   socket.on('rescueAssignment', callback)
   return () => socket.off('rescueAssignment', callback)

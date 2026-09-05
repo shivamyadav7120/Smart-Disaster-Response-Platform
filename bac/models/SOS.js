@@ -129,6 +129,13 @@ const sosSchema = new mongoose.Schema(
             default: null,
         },
 
+        // Multiple teams can respond to the same SOS. The singular field above
+        // is retained for backward compatibility and stores the primary team.
+        assignedRescueTeams: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "RescueTeam",
+        }],
+
         assignedAt: {
             type: Date,
             default: null,

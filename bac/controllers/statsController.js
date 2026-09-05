@@ -2,9 +2,7 @@ const SOS = require("../models/SOS");
 const Volunteer = require("../models/Volunteer");
 const Hospital = require("../models/Hospital");
 const Resource = require("../models/Resource");
-const Tracking = require("../models/Tracking");
 const Shelter = require("../models/Shelter");
-const RescueTeam = require("../models/RescueTeam");
 
 
 // ==========================================================
@@ -22,8 +20,6 @@ const getStats = async (req, res) => {
             hospitals,
             resources,
             shelters,
-            rescueTeamsTotal,
-            activeRescueTeams,
         ] = await Promise.all([
 
             // ------------------------------------------
@@ -71,19 +67,6 @@ const getStats = async (req, res) => {
             // ------------------------------------------
 
             Shelter.countDocuments(),
-            RescueTeam.countDocuments({ isActive: true }),
-            (async () => {
-                const cutoff = new Date(Date.now() - 45 * 1000);
-                const teams = await RescueTeam.find({ isActive: true }).select("user").lean();
-                const ids = teams.map(t => t.user).filter(Boolean);
-                if (!ids.length) return 0;
-                return Tracking.countDocuments({
-                    user: { $in: ids },
-                    type: "RescueTeam",
-                    isActive: true,
-                    lastUpdated: { $gte: cutoff },
-                });
-            })(),
         ]);
 
 
@@ -109,9 +92,8 @@ const getStats = async (req, res) => {
 
                 shelters,
 
-                rescueTeams: rescueTeamsTotal,
-                activeRescueTeams,
-                inactiveRescueTeams: Math.max(0, rescueTeamsTotal - activeRescueTeams),
+                // Frontend compatibility
+                rescueTeams: volunteers,
             },
         });
 

@@ -166,6 +166,10 @@ const getAllSOS = async (req, res) => {
                 "assignedRescueTeam",
                 "name leaderName phone status currentLocation lastLocationUpdate"
             )
+            .populate(
+                "assignedRescueTeams",
+                "name leaderName phone status currentLocation lastLocationUpdate"
+            )
 
             .sort({
                 createdAt: -1
@@ -228,6 +232,10 @@ const getMySOS = async (req, res) => {
             )
             .populate(
                 "assignedRescueTeam",
+                "name leaderName phone status currentLocation lastLocationUpdate"
+            )
+            .populate(
+                "assignedRescueTeams",
                 "name leaderName phone status currentLocation lastLocationUpdate"
             )
 
@@ -294,6 +302,10 @@ const getSOSById = async (req, res) => {
             )
             .populate(
                 "assignedRescueTeam",
+                "name leaderName phone status currentLocation lastLocationUpdate"
+            )
+            .populate(
+                "assignedRescueTeams",
                 "name leaderName phone status currentLocation lastLocationUpdate"
             );
 
