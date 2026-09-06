@@ -10,7 +10,7 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 
-// Public Routes
+
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 
