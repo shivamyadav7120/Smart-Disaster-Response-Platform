@@ -1,0 +1,43 @@
+import {
+  FaHome,
+  FaMapMarkedAlt,
+  FaMapMarkerAlt,
+  FaUsers,
+  FaWarehouse,
+  FaBoxOpen,
+  FaHandsHelping,
+  FaHospital,
+  FaChartBar,
+  FaFileAlt,
+  FaCog,
+  FaSignOutAlt,
+  FaBell,
+  FaPhoneAlt,
+  FaExclamationTriangle,
+  FaCloudShowersHeavy,
+  FaTint,
+  FaBriefcaseMedical,
+  FaLayerGroup
+} from 'react-icons/fa'
+
+export const Icon = {
+  home: FaHome,
+  map: FaMapMarkedAlt,
+  pin: FaMapMarkerAlt,
+  users: FaUsers,
+  shelter: FaWarehouse,
+  box: FaBoxOpen,
+  hands: FaHandsHelping,
+  hospital: FaHospital,
+  chart: FaChartBar,
+  file: FaFileAlt,
+  settings: FaCog,
+  logout: FaSignOutAlt,
+  bell: FaBell,
+  phone: FaPhoneAlt,
+  alert: FaExclamationTriangle,
+  weather: FaCloudShowersHeavy,
+  water: FaTint,
+  medkit: FaBriefcaseMedical,
+  blanket: FaLayerGroup
+}

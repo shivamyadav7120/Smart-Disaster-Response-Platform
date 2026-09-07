@@ -1,0 +1,14 @@
+const { scopedFilter, setDistrictOnCreate } = require("../utils/areaScope");
+const RiskZone = require("../models/RiskZone");
+const BlockedRoad = require("../models/BlockedRoad");
+const adminRoles = ["SuperAdmin","DistrictAdmin"];
+const guard = (req) => adminRoles.includes(req.user?.role);
+const listRiskZones = async (req,res)=>res.json({success:true,data:await RiskZone.find(scopedFilter(req,{isActive:true})).sort({createdAt:-1})});
+const createRiskZone = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); const d=await RiskZone.create(setDistrictOnCreate(req, req.body)); res.status(201).json({success:true,data:d});};
+const updateRiskZone = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); const d=await RiskZone.findOneAndUpdate({_id:req.params.id,...scopedFilter(req)},req.body,{new:true,runValidators:true}); if(!d)return res.status(404).json({success:false,message:"Risk zone not found"}); res.json({success:true,data:d});};
+const deleteRiskZone = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); await RiskZone.findOneAndDelete({_id:req.params.id,...scopedFilter(req)}); res.json({success:true});};
+const listBlockedRoads = async (req,res)=>res.json({success:true,data:await BlockedRoad.find(scopedFilter(req,{isActive:true})).sort({createdAt:-1})});
+const createBlockedRoad = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); const d=await BlockedRoad.create(setDistrictOnCreate(req, req.body)); res.status(201).json({success:true,data:d});};
+const updateBlockedRoad = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); const d=await BlockedRoad.findOneAndUpdate({_id:req.params.id,...scopedFilter(req)},req.body,{new:true,runValidators:true}); if(!d)return res.status(404).json({success:false,message:"Blocked road not found"}); res.json({success:true,data:d});};
+const deleteBlockedRoad = async (req,res)=>{if(!guard(req)) return res.status(403).json({success:false,message:"Admin access required"}); await BlockedRoad.findOneAndDelete({_id:req.params.id,...scopedFilter(req)}); res.json({success:true});};
+module.exports={listRiskZones,createRiskZone,updateRiskZone,deleteRiskZone,listBlockedRoads,createBlockedRoad,updateBlockedRoad,deleteBlockedRoad};
