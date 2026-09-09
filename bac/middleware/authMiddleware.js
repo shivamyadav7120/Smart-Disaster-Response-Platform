@@ -114,21 +114,15 @@ const protect = async (req, res, next) => {
             });
         }
 
-        // ------------------------------------------
-        // General Authentication Error
-        // ------------------------------------------
+        
+        
 
         return res.status(401).json({
             success: false,
             message: "Authentication failed."
         });
     }
-};
-
-
-// ======================================================
-// Role Based Authorization
-// ======================================================
+}
 
 const authorize = (...roles) => {
 
