@@ -8,7 +8,7 @@ const calculateDistance = require("../utils/distanceCalculator");
 
 
 
-// =====================================================
+
 // Update Live Location
 // POST /api/map/update-location
 // =====================================================
