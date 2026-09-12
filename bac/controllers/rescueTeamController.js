@@ -280,7 +280,11 @@ const createRescueTeam = async (req, res) => {
 
             return res.status(409).json({
                 success: false,
+<<<<<<< HEAD
                 message: "A rescue team with these unique details already exists.",
+=======
+                message: "This login email or login account is already linked to another rescue team. Use a different login email for the new team.",
+>>>>>>> 729b613 (Fix rescue team and analytics)
                 code: "DUPLICATE_RESCUE_TEAM",
             });
         }

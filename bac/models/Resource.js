@@ -42,6 +42,10 @@ const resourceSchema = new mongoose.Schema(
       pincode: String,
       latitude: Number,
       longitude: Number,
+<<<<<<< HEAD
+=======
+      accuracy: Number,
+>>>>>>> 729b613 (Fix rescue team and analytics)
     },
 
     provider: {
